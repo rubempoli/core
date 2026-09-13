@@ -71,8 +71,9 @@ class OmadaControllerEntity(CoordinatorEntity[OmadaControllerStatusCoordinator])
         """Handle updated controller status data."""
         device_registry = dr.async_get(self.hass)
         controller = self.coordinator.data
-        device_entry = device_registry.async_get_device(
-            identifiers={self._controller_identifier}
+        device_entry = device_registry.async_get_device_by_identifier(
+            self._controller_identifier,
+            self.coordinator.config_entry.entry_id,
         )
         if (
             device_entry is not None

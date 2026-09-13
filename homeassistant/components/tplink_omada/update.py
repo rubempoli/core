@@ -143,14 +143,6 @@ class OmadaControllerUpdate(OmadaControllerEntity, UpdateEntity):
 
     @property
     @override
-    def release_url(self) -> str | None:
-        """Return the URL for the latest controller release notes."""
-        if (update := self._update_data) is None:
-            return None
-        return update.release_url
-
-    @property
-    @override
     def extra_state_attributes(self) -> dict[str, str] | None:
         """Return the controller update download URL."""
         update = self._update_data

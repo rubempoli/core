@@ -49,7 +49,7 @@
       <UpdateEntityStateAttribute.INSTALLED_VERSION: 'installed_version'>: '6.2.10.17',
       <UpdateEntityStateAttribute.LATEST_VERSION: 'latest_version'>: '6.3.0.45 Build 20260903171910',
       <UpdateEntityStateAttribute.RELEASE_SUMMARY: 'release_summary'>: None,
-      <UpdateEntityStateAttribute.RELEASE_URL: 'release_url'>: 'https://example.com/controller-update.tar.gz',
+      <UpdateEntityStateAttribute.RELEASE_URL: 'release_url'>: None,
       <UpdateEntityStateAttribute.SKIPPED_VERSION: 'skipped_version'>: None,
       <EntityStateAttribute.SUPPORTED_FEATURES: 'supported_features'>: <UpdateEntityFeature: 16>,
       <UpdateEntityStateAttribute.TITLE: 'title'>: None,
