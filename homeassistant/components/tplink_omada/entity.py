@@ -1,10 +1,11 @@
 """Base entity definitions."""
 
-from typing import Any
+from typing import Any, override
 
 from tplink_omada_client import OmadaControllerStatus
 from tplink_omada_client.devices import OmadaDevice, OmadaSwitchPortDetails
 
+from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -47,6 +48,7 @@ class OmadaControllerEntity(CoordinatorEntity[OmadaControllerStatusCoordinator])
         super().__init__(coordinator)
 
         controller: OmadaControllerStatus = coordinator.data
+        self._controller_identifier = (DOMAIN, controller.mac)
 
         device_name = (
             f"{controller.model} - {controller.name}"
@@ -62,3 +64,23 @@ class OmadaControllerEntity(CoordinatorEntity[OmadaControllerStatusCoordinator])
             name=device_name,
             sw_version=controller.current_version,
         )
+
+    @callback
+    @override
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated controller status data."""
+        device_registry = dr.async_get(self.hass)
+        controller = self.coordinator.data
+        device_entry = device_registry.async_get_device(
+            identifiers={self._controller_identifier}
+        )
+        if (
+            device_entry is not None
+            and device_entry.sw_version != controller.current_version
+        ):
+            device_registry.async_update_device(
+                device_entry.id,
+                sw_version=controller.current_version,
+            )
+
+        super()._handle_coordinator_update()

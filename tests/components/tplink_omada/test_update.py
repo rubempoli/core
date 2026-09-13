@@ -11,7 +11,10 @@ from tplink_omada_client.devices import OmadaListDevice
 from tplink_omada_client.exceptions import OmadaClientException, RequestFailed
 
 from homeassistant.components.tplink_omada.const import DOMAIN
-from homeassistant.components.tplink_omada.coordinator import POLL_DEVICES
+from homeassistant.components.tplink_omada.coordinator import (
+    POLL_CONTROLLER,
+    POLL_DEVICES,
+)
 from homeassistant.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
@@ -31,7 +34,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import (
     MockConfigEntry,
@@ -42,6 +45,7 @@ from tests.common import (
 from tests.typing import WebSocketGenerator
 
 POLL_INTERVAL = timedelta(seconds=POLL_DEVICES)
+CONTROLLER_POLL_INTERVAL = timedelta(seconds=POLL_CONTROLLER)
 
 
 async def _rebuild_device_list_with_update(
@@ -177,6 +181,8 @@ async def test_install_controller_firmware_success(
         UpdateEntityFeature.RELEASE_NOTES | UpdateEntityFeature.INSTALL
     )
 
+    mock_omada_client.check_firmware_updates.reset_mock()
+
     await hass.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
@@ -185,7 +191,7 @@ async def test_install_controller_firmware_success(
     )
 
     mock_omada_client.install_controller_firmware.assert_awaited_once_with("1.0.1")
-    mock_omada_client.check_firmware_updates.assert_awaited()
+    mock_omada_client.check_firmware_updates.assert_awaited_once()
 
 
 async def test_controller_update_check_failure_does_not_block_setup(
@@ -245,6 +251,47 @@ async def test_controller_software_update_installed_version_prefers_status_coord
     assert entity.state == STATE_OFF
     assert entity.attributes[ATTR_INSTALLED_VERSION] == "6.3.0.45"
     assert entity.attributes[ATTR_LATEST_VERSION] == "6.3.0.45"
+
+
+async def test_controller_device_sw_version_updates_with_status_coordinator(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_omada_client: MagicMock,
+    device_registry: dr.DeviceRegistry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test controller device software version updates with controller status."""
+    mock_config_entry.add_to_hass(hass)
+
+    with patch("homeassistant.components.tplink_omada.PLATFORMS", [Platform.UPDATE]):
+        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    device_entry = device_registry.async_get_device(
+        identifiers={(DOMAIN, "00-11-22-33-44-55")}
+    )
+    assert device_entry is not None
+    assert device_entry.sw_version == "6.2.10.17"
+
+    mock_omada_client.get_controller_status.return_value = OmadaControllerStatus(
+        {
+            "name": "Test Omada Controller",
+            "macAddress": "00-11-22-33-44-55",
+            "upTime": 123456,
+            "controllerVersion": "6.3.0.45",
+            "model": "OC200",
+        }
+    )
+
+    freezer.tick(CONTROLLER_POLL_INTERVAL)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    device_entry = device_registry.async_get_device(
+        identifiers={(DOMAIN, "00-11-22-33-44-55")}
+    )
+    assert device_entry is not None
+    assert device_entry.sw_version == "6.3.0.45"
 
 
 @pytest.mark.parametrize(
@@ -328,6 +375,8 @@ async def test_install_controller_firmware_exceptions(
         assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
+    mock_omada_client.check_firmware_updates.reset_mock()
+
     with pytest.raises(HomeAssistantError) as err:
         await hass.services.async_call(
             UPDATE_DOMAIN,
@@ -338,7 +387,7 @@ async def test_install_controller_firmware_exceptions(
 
     assert err.value.translation_key == translation_key
     assert err.value.translation_domain == DOMAIN
-    mock_omada_client.check_firmware_updates.assert_awaited()
+    mock_omada_client.check_firmware_updates.assert_awaited_once()
 
 
 async def test_install_controller_firmware_rejected_without_hardware(
