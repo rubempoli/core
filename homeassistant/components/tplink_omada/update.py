@@ -185,6 +185,11 @@ class OmadaControllerUpdate(OmadaControllerEntity, UpdateEntity):
 
         try:
             await self._omada_client.install_controller_firmware(target_version)
+        except RequestFailed as ex:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="firmware_update_rejected",
+            ) from ex
         except OmadaClientException as ex:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,

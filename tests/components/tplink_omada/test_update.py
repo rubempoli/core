@@ -293,7 +293,7 @@ async def test_install_firmware_exceptions(
     [
         (
             RequestFailed(500, "Update rejected"),
-            "firmware_update_failed",
+            "firmware_update_rejected",
         ),
         (
             OmadaClientException("Connection error"),
