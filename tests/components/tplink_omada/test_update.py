@@ -35,6 +35,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.update_coordinator import REQUEST_REFRESH_DEFAULT_COOLDOWN
 
 from tests.common import (
     MockConfigEntry,
@@ -46,6 +47,7 @@ from tests.typing import WebSocketGenerator
 
 POLL_INTERVAL = timedelta(seconds=POLL_DEVICES)
 CONTROLLER_POLL_INTERVAL = timedelta(seconds=POLL_CONTROLLER)
+REFRESH_COOLDOWN = timedelta(seconds=REQUEST_REFRESH_DEFAULT_COOLDOWN)
 
 
 async def _rebuild_device_list_with_update(
@@ -151,6 +153,7 @@ async def test_install_controller_firmware_success(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_omada_client: MagicMock,
+    freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test successful controller firmware installation."""
     entity_id = "update.oc200_test_omada_controller_firmware"
@@ -189,6 +192,10 @@ async def test_install_controller_firmware_success(
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
+
+    freezer.tick(REFRESH_COOLDOWN)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
 
     mock_omada_client.install_controller_firmware.assert_awaited_once_with("1.0.1")
     mock_omada_client.check_firmware_updates.assert_awaited_once()
@@ -267,8 +274,9 @@ async def test_controller_device_sw_version_updates_with_status_coordinator(
         assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
-    device_entry = device_registry.async_get_device(
-        identifiers={(DOMAIN, "00-11-22-33-44-55")}
+    device_entry = device_registry.async_get_device_by_identifier(
+        (DOMAIN, "00-11-22-33-44-55"),
+        mock_config_entry.entry_id,
     )
     assert device_entry is not None
     assert device_entry.sw_version == "6.2.10.17"
@@ -287,8 +295,9 @@ async def test_controller_device_sw_version_updates_with_status_coordinator(
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
-    device_entry = device_registry.async_get_device(
-        identifiers={(DOMAIN, "00-11-22-33-44-55")}
+    device_entry = device_registry.async_get_device_by_identifier(
+        (DOMAIN, "00-11-22-33-44-55"),
+        mock_config_entry.entry_id,
     )
     assert device_entry is not None
     assert device_entry.sw_version == "6.3.0.45"
@@ -352,6 +361,7 @@ async def test_install_controller_firmware_exceptions(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_omada_client: MagicMock,
+    freezer: FrozenDateTimeFactory,
     exception_type: Exception,
     translation_key: str,
 ) -> None:
@@ -387,6 +397,9 @@ async def test_install_controller_firmware_exceptions(
 
     assert err.value.translation_key == translation_key
     assert err.value.translation_domain == DOMAIN
+    freezer.tick(REFRESH_COOLDOWN)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
     mock_omada_client.check_firmware_updates.assert_awaited_once()
 
 
