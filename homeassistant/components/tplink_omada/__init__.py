@@ -18,6 +18,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 
+from ._library_test import collect_library_test_evidence
 from .config_flow import CONF_SITE, create_omada_client
 from .const import DOMAIN
 from .controller import OmadaSiteController
@@ -47,6 +48,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: OmadaConfigEntry) -> bool:
     """Set up TP-Link Omada from a config entry."""
+
+    _LOGGER.warning(
+        "Omada library test evidence: %s",
+        await hass.async_add_executor_job(collect_library_test_evidence),
+    )
 
     try:
         client = await create_omada_client(hass, entry.data)

@@ -1,11 +1,16 @@
 {
   "domain": "tplink_omada",
   "name": "TP-Link Omada",
-  "codeowners": ["@MarkGodwin"],
+  "codeowners": [
+    "@MarkGodwin"
+  ],
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/tplink_omada",
   "integration_type": "hub",
   "iot_class": "local_polling",
   "quality_scale": "bronze",
-  "requirements": ["tplink-omada-client==1.5.10"]
+  "requirements": [
+    "tplink-omada-client @ file:///config/realsw-ha-config/state/omada-null-sections-221976f/artifacts/test/tplink_omada_client-1.5.10-py3-none-any.whl#sha256=a1d298166ddcd01580af6c281cbab5ca8978de7efbd1db337e324aaf51558e2c"
+  ],
+  "version": "2026.10.0.dev184946"
 }
