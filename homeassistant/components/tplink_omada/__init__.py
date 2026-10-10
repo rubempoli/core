@@ -1,5 +1,7 @@
 """The TP-Link Omada integration."""
 
+from importlib.metadata import version
+from inspect import getfile
 import logging
 
 from tplink_omada_client import OmadaSite
@@ -47,6 +49,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: OmadaConfigEntry) -> bool:
     """Set up TP-Link Omada from a config entry."""
+    library_version = await hass.async_add_executor_job(version, "tplink-omada-client")
+    _LOGGER.warning(
+        "Omada 1.5.13 fallback test: client=%s, library=%s, integration=%s",
+        library_version,
+        getfile(OmadaSite),
+        __file__,
+    )
 
     try:
         client = await create_omada_client(hass, entry.data)
