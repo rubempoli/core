@@ -8,7 +8,7 @@ from tplink_omada_client import OmadaClientSettings
 from tplink_omada_client.exceptions import OmadaClientException, RequestFailed
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import CommonServiceArgument
+from homeassistant.const import ATTR_CONFIG_ENTRY_ID, ATTR_DEVICE_ID
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import (
@@ -37,9 +37,9 @@ class OmadaServiceArgument(StrEnum):
 
 
 def _get_controller(call: ServiceCall) -> OmadaSiteController:
-    if call.data.get(CommonServiceArgument.CONFIG_ENTRY_ID):
+    if call.data.get(ATTR_CONFIG_ENTRY_ID):
         entry = call.hass.config_entries.async_get_entry(
-            call.data[CommonServiceArgument.CONFIG_ENTRY_ID]
+            call.data[ATTR_CONFIG_ENTRY_ID]
         )
         if not entry:
             raise ServiceValidationError(
@@ -94,9 +94,7 @@ async def _resolve_client_controller(
     """Resolve the controller and MAC of the client referenced by the call."""
     hass = call.hass
 
-    entry = hass.config_entries.async_get_entry(
-        call.data[CommonServiceArgument.CONFIG_ENTRY_ID]
-    )
+    entry = hass.config_entries.async_get_entry(call.data[ATTR_CONFIG_ENTRY_ID])
     if not entry or entry.domain != DOMAIN:
         raise ServiceValidationError(
             translation_domain=DOMAIN,
@@ -109,7 +107,7 @@ async def _resolve_client_controller(
         )
     controller = cast(ConfigEntry[OmadaSiteController], entry).runtime_data
 
-    device = dr.async_get(hass).async_get(call.data[CommonServiceArgument.DEVICE_ID])
+    device = dr.async_get(hass).async_get(call.data[ATTR_DEVICE_ID])
     if device is None or not isinstance(device, dr.DeviceEntry):
         # Child devices carry no connections to resolve a MAC from.
         raise ServiceValidationError(
@@ -189,16 +187,12 @@ def async_setup_services(hass: HomeAssistant) -> None:
         _handle_set_client_name,
         schema=probatio.Schema(
             {
-                probatio.Required(
-                    CommonServiceArgument.CONFIG_ENTRY_ID
-                ): selector.ConfigEntrySelector(
+                probatio.Required(ATTR_CONFIG_ENTRY_ID): selector.ConfigEntrySelector(
                     {
                         "integration": DOMAIN,
                     }
                 ),
-                probatio.Required(
-                    CommonServiceArgument.DEVICE_ID
-                ): selector.DeviceSelector(),
+                probatio.Required(ATTR_DEVICE_ID): selector.DeviceSelector(),
                 probatio.Required(OmadaServiceArgument.NAME): probatio.All(
                     cv.string, probatio.NonEmpty()
                 ),
@@ -211,9 +205,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         _handle_reconnect_client,
         schema=probatio.Schema(
             {
-                probatio.Optional(
-                    CommonServiceArgument.CONFIG_ENTRY_ID
-                ): selector.ConfigEntrySelector(
+                probatio.Optional(ATTR_CONFIG_ENTRY_ID): selector.ConfigEntrySelector(
                     {
                         "integration": DOMAIN,
                     }
